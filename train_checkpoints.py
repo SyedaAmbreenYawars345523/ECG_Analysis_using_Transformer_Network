@@ -4,15 +4,16 @@ import time
 import torch
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
-from ECGModel1 import EcgModel
-from adjust_learning_rate import adjust_learning_rate
-from save_checkpoint import save_checkpoint
-from average_meter import AverageMeter
+from natsort import natsorted
 import numpy as np
 import os
 from pandas import *
 from sklearn.model_selection import train_test_split
 from torch.utils.tensorboard import SummaryWriter
+import tensorflow as tf
+import datetime, os
+
+
 
 # Model Parameters
 d_model = 64
@@ -26,11 +27,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # sets  de
 
 # Training parameters
 start_epoch = 0
-epochs = 10 # number of epochs to train for (if early stopping is not triggered)
+epochs = 100 # number of epochs to train for (if early stopping is not triggered)
 epochs_since_improvement = 0 # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 8
+batch_size = 32
 workers = 1       # for data-loading; right now, only 1 works with h5py
-lr = 1e-4         # learning rate for encoder
+lr = 1e-4         # learning rate 
 best_loss = np.inf       # Best score right now
 print_freq = 100  # print training/validation stats every __ batches
 checkpoint = None  # path to checkpoint, None if none
@@ -47,56 +48,15 @@ def main():
 
     global batch_size, best_loss, epochs_since_improvement, checkpoint, start_epoch
 
-    ##############################
-    # getting ecgs in data array:
-    #############################
-    lead1 = []
-    limit = 100
-    j = 0
-    for i in os.listdir("all_normal_ecg"):
+    ############################
+    # getting ecgs and targets :
+    ############################
 
-        ecg_temp = np.loadtxt("all_normal_ecg/" + i)
-        lead1.append(ecg_temp[:, 0].T * (1 / 1000))  # lead 1 of ecg dataset
-        j = j + 1
-        if j == limit:
-            break
-
-        # print(ecg_temp[:,0])
-        # print(np.shape(ecg_temp[:,0]))
-    # print(numpy.shape(data))
-    # print(np.shape(data[0]))
-    # print(numpy.shape(data))
-    lead1 = np.array(lead1)
-    lead1 = torch.Tensor(lead1)
-    # lead1 = lead1.T*(2/1000)
-    # print(lead1.shape)
-    # print(data[1][1].shape)
-    # print(lead1[0].shape)
-    print(lead1[0])
-    print(len(lead1))
-
-    #####################################
-    # getting target value of Ventrate:##
-    ####################################
-    # reading CSV file
-    data = read_csv("filtered_all_normals_121977_ground_truth.csv", nrows=len(lead1))
-    vent_rt = data['VentRate'].tolist()
-    # print(np.shape(vent_rt))
-    vent_rt = np.array(vent_rt)
-    vent_rt = torch.Tensor(vent_rt)
-    # print(vent_rt)
-    print(vent_rt.shape)
-
-    #############################################3
-    ############ converting the symbols only for easyness:
-    #####################################################
-
-    X, y = lead1, vent_rt.view(vent_rt.shape[0], 1)
-    print(y.shape)  # here we making same shape of target and dataset
-
-    ##################################
+    X, y = get_train_val_data('/content/drive/MyDrive/all_mormal_ecg', '/content/drive/MyDrive/all_mormal_ecg/', '/content/drive/MyDrive/filtered_all_normals_121977_ground_truth.csv')
+    print(y.shape)
+    #################################
     # train-test split of the dataset
-    ##################################
+    #################################
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, shuffle=False)
 
     # preparing Dataloader:
@@ -109,7 +69,10 @@ def main():
 
     if checkpoint is None:
         model = EcgModel(d_model, nhead, num_layers, num_conv_layers)
+        #Adam
         model_optimizer = torch.optim.Adam(params=filter(lambda p:p.requires_grad, model.parameters()), lr=lr, weight_decay=1e-6)
+        # AdamW ((β1=0.9, β2=0.98, ε=10^(-9)))
+        #model_optimizer = torch.optim.AdamW(params=filter(lambda p:p.requires_grad, model.parameters()), lr=lr, betas=(0.9, 0.98), eps=1e-09)
 
 
     else:
@@ -140,11 +103,20 @@ def main():
 
     for epoch in range(start_epoch, epochs):
 
-        #Decay learning rate if there is no improvement for 8 consecutive epochs, and and terminate training after 20
-        if epochs_since_improvement == 10:
+        #Decay learning rate if there is no improvement for 4 consecutive epochs and after 30 epoch dectrease after every 5th epoch, and and terminate training after 15
+        if epochs_since_improvement == 20:
             break
-        if epochs_since_improvement > 0 and epochs_since_improvement % 4 == 0:
+
+        if epochs_since_improvement > 0 and epochs_since_improvement % 8 == 0:
             adjust_learning_rate(model_optimizer, 0.8)
+
+        if epoch > 29 and epoch % 5 == 0:
+            adjust_learning_rate(model_optimizer, 0.05)
+
+
+## add condition for decay if little loss difference 
+
+        
 
 
         # One epoch's training
@@ -165,29 +137,33 @@ def main():
 
         # Check if there was an improvement
         is_best =  recent_loss < best_loss
-        best_loss = recent_loss
+        
         if not is_best:
             epochs_since_improvement += 1
             print("\nEpochs since last improvement: %d\n" % (epochs_since_improvement,))
+            
         else:
             epochs_since_improvement = 0
+            best_loss = recent_loss
 
 
         # Save checkpoint
 
-        save_checkpoint("ecg64442512", epoch, epochs_since_improvement, model, model_optimizer,
+        save_checkpoint("result_ecg_16.03", epoch, epochs_since_improvement, model, model_optimizer,
                          recent_loss, is_best)
 
 
-    epo = range(1, epochs + 1)
-    plt.figure()
+    epo = range(1, (len(history_trainval['train_loss_plot'])) + 1)
+    plt.figure(figsize=(10, 10), dpi=80)
     plt.plot(epo, history_trainval['train_loss_plot'], 'g', label='Training loss')
     plt.plot(epo, history_trainval['validate_loss_plot'], 'r', label='Validation loss')
     plt.title('Training and validation loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
+    plt.ylim(-2,100)
     plt.legend(loc='upper left')
-
+    
+    
     plt.show()
 
 
@@ -242,14 +218,14 @@ def train(train_loader, model, criterion, model_optimizer, epoch):
         start = time.time()
 
         # Print status
-
-        print('Epoch: [{0}][{1}/{2}]\t'
-                  'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, batch, len(train_loader),
-                                                                          batch_time=batch_time,
-                                                                          data_time=data_time, loss=losses))
-
+        if batch % print_freq == 0:
+          print('Epoch: [{0}][{1}/{2}]\t'
+                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                      'Data Load Time {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(epoch, batch, len(train_loader),
+                                                                              batch_time=batch_time,
+                                                                              data_time=data_time, loss=losses))
+          
     history['loss'].append(losses.avg)
 
     return history
@@ -264,7 +240,7 @@ def validate(val_loader, model, criterion):
         :param encoder: encoder model
         :param decoder: decoder model
         :param criterion: loss layer
-        :return: BLEU-4 score
+        :return: Average score
         """
     history_val = {
       'loss_val': []
@@ -294,12 +270,12 @@ def validate(val_loader, model, criterion):
 
             start = time.time()
 
-
-            print('Validation: [{0}/{1}]\t'
+            # Print status
+            if batch % 10 == 0:
+              print('Validation: [{0}/{1}]\t'
                       'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t'.format(batch, len(val_loader), batch_time=batch_time,
                                                                                 loss=losses))
-
         print('\n * LOSS - {loss.avg:.3f}\n'.format(loss=losses))
 
         history_val['loss_val'].append(losses.avg)

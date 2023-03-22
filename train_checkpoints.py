@@ -33,11 +33,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # sets  de
 # Training parameters
 start_epoch = 0
 epochs = 100 # number of epochs to train for (if early stopping is not triggered)
-epochs_since_improvement = 0 # keeps track of number of epochs since there's been an improvement in validation BLEU
-batch_size = 32
-workers = 1       # for data-loading; right now, only 1 works with h5py
+epochs_since_improvement = 0 # keeps track of number of epochs since there's been an improvement in validation loss
+batch_size = 32   # not working on higher on colab
+workers = 1       # for data-loading; 
 lr = 1e-4         # learning rate 
-best_loss = np.inf       # Best score right now
+best_loss = np.inf       # Best score right infinity
 print_freq = 100  # print training/validation stats every __ batches
 checkpoint = None  # path to checkpoint, None if none
 
@@ -116,9 +116,10 @@ def main():
             adjust_learning_rate(model_optimizer, 0.8)
 
         if epoch > 29 and epoch % 5 == 0:
-            adjust_learning_rate(model_optimizer, 0.05)
+            adjust_learning_rate(model_optimizer, 0.97)
 
-
+## need feedback for scheduler , its not good!
+## basic one with 20 break and no improvement after working fine!!
 ## add condition for decay if little loss difference 
 
         

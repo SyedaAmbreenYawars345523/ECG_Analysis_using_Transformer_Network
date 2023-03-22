@@ -4,7 +4,7 @@ import time
 import torch
 from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
-from ECGmodel1 import EcgModel
+from ECGModel1 import EcgModel
 from adjust_learning_rate import adjust_learning_rate
 from save_checkpoint import save_checkpoint
 from average_meter import AverageMeter

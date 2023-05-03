@@ -1,7 +1,7 @@
 # ECG_Transformer
 
 ECG analysis using transformer network: Two end-to-end models are proposed
-                                       : Model A: Encoder of transformer only used in model.
+                                       : Model A: Only Encoder of transformer used in model.
                                        : Model B: Both Encoder and Decoder of transformer used in model.
 
 

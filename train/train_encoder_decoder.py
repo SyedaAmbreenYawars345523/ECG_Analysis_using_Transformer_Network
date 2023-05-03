@@ -12,6 +12,7 @@ from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
 #from natsort import natsorted
 from transformer_encoder_decoder import EcgModel
+from encoder_decoder_data_fetch import get_train_val_data
 import numpy as np
 import os
 from pandas import *

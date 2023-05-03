@@ -29,7 +29,7 @@ model = model.to(device)
 model.eval()
 criterion = nn.MSELoss().to(device)
 
-#load ecg and vent_rt
+#load ecg and  vent_rt
 
 
 ##############################

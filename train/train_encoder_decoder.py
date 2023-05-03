@@ -2,7 +2,7 @@
 
 #import wandb
 
-# experiment_2_1value_encoder
+# Model_B (encoder decoder)
 
 # matplotlib inline
 import matplotlib.pyplot as plt

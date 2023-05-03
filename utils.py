@@ -5,6 +5,7 @@ import math
 
 
 def adjust_learning_rate(optimizer, shrink_factor):
+    # fetch from sgrvinod https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning
     """
     Shrinks learning rate by a specified factor.
 
@@ -44,6 +45,7 @@ class AverageMeter(object):
 
 def save_checkpoint(data_name, epoch, epochs_since_improvement, model, model_optimizer,
                     recent_loss, is_best):
+    # fetch from sgrvinod https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning
     """
     Saves model checkpoint.
 

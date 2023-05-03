@@ -4,7 +4,9 @@ import numpy as np
 from pandas import *
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
-from ECGModel1 import EcgModel
+from transformer_encoder_decoder import EcgModel
+#from transformer_encoder.py import EcgModel
+
 
 from positionalencoding import PositionalEncoding
 from selfattentionpooling import SelfAttentionPooling

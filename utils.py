@@ -166,5 +166,6 @@ class SelfAttentionPooling(nn.Module):
         utter_rep = torch.sum(batch_rep * att_w, dim=1)
 
         return utter_rep
+    
 
 
